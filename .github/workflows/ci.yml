@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: outfit_builder
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d outfit_builder"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/outfit_builder
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      API_URL: http://localhost:8080
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      AUTH_SECRET: ci-secret
+      ADMIN_EMAIL: admin@example.com
+      # Not a real bcrypt hash — only needs to be a non-empty string here.
+      # apps/api/src/routes/admin.test.ts overrides this with a real hash
+      # for its own login-flow assertions before importing the app.
+      ADMIN_PASSWORD_HASH: ci-placeholder-hash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter api exec prisma generate
+
+      - name: Apply database migrations
+        run: pnpm --filter api exec prisma migrate deploy
+
+      - name: Seed database
+        run: pnpm --filter api db:seed
+
+      - name: Build shared packages
+        # apps/api and apps/web both consume @outfit-builder/contracts via its
+        # compiled dist/ output (its package.json "main"/"types" point there,
+        # since apps/api's own production build needs real JS at runtime, not
+        # raw TS). Every step below — lint, typecheck, test, build, e2e — needs
+        # that dist/ to exist first on a fresh checkout.
+        run: pnpm --filter contracts run build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: E2E smoke tests
+        run: pnpm --filter web test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

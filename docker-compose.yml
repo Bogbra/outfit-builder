@@ -1,0 +1,26 @@
+# Pinned explicitly so the compose project (and therefore the postgres-data
+# volume) stays stable regardless of what the checkout directory is named —
+# it otherwise defaults to the directory basename, which would silently
+# orphan the existing database volume if the folder is ever renamed.
+name: outfit-builder
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: outfit_builder
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d outfit_builder"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

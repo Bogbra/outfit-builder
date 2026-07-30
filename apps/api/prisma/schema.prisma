@@ -1,0 +1,128 @@
+// Mirrors the Product domain type in packages/contracts/src/domain/product.ts.
+// Category and Availability enum values must stay in sync with the Zod
+// enums there — Prisma is the DB source of truth, Zod is the
+// validation/API source of truth.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  top
+  bottom
+  shoes
+  jacket
+  bag
+  accessory
+}
+
+enum Availability {
+  in_stock
+  low_stock
+  out_of_stock
+}
+
+enum ValidationStatus {
+  complete
+  incomplete
+}
+
+model Product {
+  id           String       @id @default(uuid())
+  name         String
+  slug         String       @unique
+  description  String
+  category     Category
+  price        Float
+  currency     String
+  images       String[]
+  colors       String[]
+  sizes        String[]
+  styleTags    String[]
+  material     String
+  availability Availability
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  outfitItems  OutfitItem[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+// Mirrors the Outfit domain type in packages/contracts/src/domain/outfit.ts.
+// totalPrice/currency/styleTags/validationStatus are snapshots computed
+// server-side at save time from the real product data — never trust
+// client-submitted values for these.
+model Outfit {
+  id               String            @id @default(uuid())
+  name             String
+  totalPrice       Float
+  currency         String?
+  styleTags        String[]
+  validationStatus ValidationStatus
+  items            OutfitItem[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model OutfitItem {
+  id            String   @id @default(uuid())
+  outfitId      String
+  outfit        Outfit   @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+  category      Category
+  selectedColor String
+  selectedSize  String
+
+  @@index([outfitId])
+  @@index([productId])
+}
+
+// One row per issued admin JWT (id = the token's `jti` claim). The token's
+// own signature/exp is still checked on every request (jose, stateless) —
+// this table exists only to make logout actually revoke a token before its
+// 8h expiry, which a stateless JWT alone can't do.
+model AdminSession {
+  id        String    @id
+  email     String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  @@index([expiresAt])
+}
+
+enum TryOnStatus {
+  processing
+  completed
+  failed
+}
+
+// One row per virtual try-on request. Advanced one chain-step at a time by
+// each GET /api/try-on/:id poll — there's no background worker, so the
+// client's own polling is what drives progress. The uploaded photo itself
+// is never stored here or anywhere: it's forwarded in-memory to fashn.ai
+// for step 1 only, and every step after that reuses fashn's own output CDN
+// URL as the next input.
+model TryOnRequest {
+  id                String      @id @default(uuid())
+  status            TryOnStatus @default(processing)
+  items             Json // ordered [{ category, garmentImageUrl }] snapshot from the outfit at request time
+  currentStep       Int         @default(0)
+  lastStepImageUrl  String? // fashn's output from the most recently completed step; becomes next step's model_image
+  resultImageUrl    String? // set once currentStep reaches the end of items
+  fashnPredictionId String? // the in-flight fashn.ai prediction id for currentStep
+  errorMessage      String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  expiresAt         DateTime // now()+1h at creation; periodic cleanup of stale rows is a documented follow-up (no cron infra exists yet, same gap as AdminSession)
+
+  @@index([expiresAt])
+}
