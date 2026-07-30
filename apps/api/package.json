@@ -21,7 +21,7 @@
     "load-test": "tsx scripts/load-test.ts"
   },
   "dependencies": {
-    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@escape.tech/graphql-armor": "^3.2.0",
     "@outfit-builder/contracts": "workspace:*",
     "@prisma/client": "^6.1.0",
