@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.4",
@@ -30,15 +30,15 @@
     "@outfit-builder/config": "workspace:*",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "eslint": "^9.17.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.3",
     "eslint-plugin-react-hooks": "^5.1.0",
     "jsdom": "^25.0.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "vitest-axe": "^0.1.0"
