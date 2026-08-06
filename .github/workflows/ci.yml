@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: outfit_builder
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d outfit_builder"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/outfit_builder
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      API_URL: http://localhost:8080
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      AUTH_SECRET: ci-secret-do-not-use-in-production
+      ADMIN_EMAIL: admin@example.com
+      # Not a real bcrypt hash — only needs to be a non-empty string here.
+      # apps/api/src/routes/admin.test.ts overrides this with a real hash
+      # for its own login-flow assertions before importing the app.
+      ADMIN_PASSWORD_HASH: ci-placeholder-hash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # gitleaks scans full history, not just the checked-out commit
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ff378ebe6b225b0680b81c1ad4498ae0d1d3a5e3 # v6.0.10
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependency vulnerability scan (production dependencies)
+        # Blocking — this is what's actually shipped and exposed.
+        run: pnpm audit --prod --audit-level=high
+
+      - name: Dependency vulnerability scan (including dev dependencies)
+        # Non-blocking: current findings are all in vitest/vite, dev-only
+        # tooling not reachable in production. Fixing them needs a vitest
+        # v2->v3 major upgrade, tracked separately.
+        run: pnpm audit --audit-level=high || true
+
+      - name: Generate Prisma Client
+        run: pnpm --filter api exec prisma generate
+
+      - name: Validate Prisma schema
+        run: pnpm --filter api exec prisma validate
+
+      - name: Apply database migrations
+        run: pnpm --filter api exec prisma migrate deploy
+
+      - name: Seed database
+        run: pnpm --filter api db:seed
+
+      - name: Build shared packages
+        # apps/api and apps/web both consume @outfit-builder/contracts via its
+        # compiled dist/ output (its package.json "main"/"types" point there,
+        # since apps/api's own production build needs real JS at runtime, not
+        # raw TS). Every step below — lint, typecheck, test, build, e2e — needs
+        # that dist/ to exist first on a fresh checkout.
+        run: pnpm --filter contracts run build
+
+      - name: Check OpenAPI spec is up to date
+        run: |
+          pnpm --filter api generate:openapi
+          git diff --exit-code docs/openapi.yaml
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Docker build (apps/api)
+        run: docker build -f apps/api/Dockerfile .
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: E2E smoke tests
+        run: pnpm --filter web test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

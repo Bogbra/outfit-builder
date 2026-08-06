@@ -1,0 +1,236 @@
+# =========================================================
+# Dependencies
+# =========================================================
+
+node_modules/
+.pnpm-store/
+.pnp/
+.pnp.*
+
+# Package-manager caches
+.npm/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+
+
+# =========================================================
+# Build output
+# =========================================================
+
+dist/
+build/
+.next/
+out/
+.turbo/
+.vercel/
+.swc/
+
+# TypeScript build information
+*.tsbuildinfo
+next-env.d.ts
+
+
+# =========================================================
+# Testing and coverage
+# =========================================================
+
+coverage/
+.nyc_output/
+
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+
+junit.xml
+junit-report.xml
+test-results.xml
+
+
+# =========================================================
+# Environment variables
+# =========================================================
+
+.env
+.env.*
+.envrc
+.direnv/
+
+# Keep public environment templates
+!.env.example
+!.env.*.example
+!.env.template
+
+
+# =========================================================
+# Logs
+# =========================================================
+
+logs/
+*.log
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+debug.log
+error.log
+
+
+# =========================================================
+# Local caches
+# =========================================================
+
+.cache/
+.eslintcache
+.stylelintcache
+.prettier-cache
+*.cache
+
+
+# =========================================================
+# Local databases
+# =========================================================
+
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal
+
+
+# =========================================================
+# Secrets, certificates and credentials
+# =========================================================
+
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+credentials.json
+credentials.*.json
+service-account.json
+service-account*.json
+gcp-key.json
+gcp-key*.json
+
+secrets/
+.secret/
+.secrets/
+
+
+# =========================================================
+# Cloud and deployment tools
+# =========================================================
+
+.gcloud/
+.firebase/
+.serverless/
+
+# Terraform-generated local files
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# Keep Terraform dependency lock file if Terraform is added later
+!.terraform.lock.hcl
+
+
+# =========================================================
+# Editor and IDE files
+# =========================================================
+
+.idea/
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+*.swp
+*.swo
+*.swn
+*~
+.history/
+
+
+# =========================================================
+# Operating-system files
+# =========================================================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+ehthumbs.db
+
+
+# =========================================================
+# AI coding tool configuration
+# =========================================================
+
+.claude/
+CLAUDE.md
+
+.cursor/
+.aider*
+.continue/
+.windsurf/
+.codeium/
+.gemini/
+
+
+# =========================================================
+# Internal project documentation
+# =========================================================
+
+# Everything under docs/ is internal (architecture/review notes) except the
+# generated OpenAPI spec, which is public API documentation.
+docs/*
+!docs/openapi.yaml
+
+
+# =========================================================
+# Temporary local files
+# =========================================================
+
+tmp/
+temp/
+.tmp/
+.local/
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+
+# =========================================================
+# Local profiling and performance output
+# =========================================================
+
+profiles/
+*.cpuprofile
+*.heapprofile
+*.heapsnapshot
+clinic/

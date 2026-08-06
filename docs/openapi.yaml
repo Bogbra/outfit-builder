@@ -1,0 +1,996 @@
+openapi: 3.0.0
+info:
+  title: Outfit Builder API
+  version: 1.0.0
+  description: REST surface of apps/api. The public product catalog is served over
+    GraphQL instead (POST /graphql).
+  license:
+    name: UNLICENSED
+servers:
+  - url: http://localhost:8080
+    description: Local dev
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - password
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 140
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        description:
+          type: string
+          maxLength: 2000
+        category:
+          type: string
+          enum: &a1
+            - top
+            - bottom
+            - shoes
+            - jacket
+            - bag
+            - accessory
+        priceMinor:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          minItems: 1
+        colors:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+        sizes:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+        styleTags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        material:
+          type: string
+          minLength: 1
+          maxLength: 120
+        availability:
+          type: string
+          enum: &a2
+            - in_stock
+            - low_stock
+            - out_of_stock
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - slug
+        - description
+        - category
+        - priceMinor
+        - currency
+        - images
+        - colors
+        - sizes
+        - styleTags
+        - material
+        - availability
+        - isActive
+        - createdAt
+        - updatedAt
+    AdminProductPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+                minLength: 1
+                maxLength: 120
+              slug:
+                type: string
+                minLength: 1
+                maxLength: 140
+                pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+              description:
+                type: string
+                maxLength: 2000
+              category:
+                type: string
+                enum: *a1
+              priceMinor:
+                type: integer
+                minimum: 0
+                maximum: 10000000
+              currency:
+                type: string
+                minLength: 3
+                maxLength: 3
+              images:
+                type: array
+                items:
+                  type: string
+                  format: uri
+                minItems: 1
+              colors:
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+                minItems: 1
+              sizes:
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+                minItems: 1
+              styleTags:
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+              material:
+                type: string
+                minLength: 1
+                maxLength: 120
+              availability:
+                type: string
+                enum: *a2
+              isActive:
+                type: boolean
+              createdAt:
+                type: string
+                nullable: true
+              updatedAt:
+                type: string
+                nullable: true
+            required:
+              - id
+              - name
+              - slug
+              - description
+              - category
+              - priceMinor
+              - currency
+              - images
+              - colors
+              - sizes
+              - styleTags
+              - material
+              - availability
+              - isActive
+              - createdAt
+              - updatedAt
+        total:
+          type: number
+        page:
+          type: number
+        pageSize:
+          type: number
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+    Outfit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+                format: uuid
+              category:
+                type: string
+                enum: *a1
+              selectedColor:
+                type: string
+                minLength: 1
+              selectedSize:
+                type: string
+                minLength: 1
+            required:
+              - productId
+              - category
+              - selectedColor
+              - selectedSize
+            additionalProperties: false
+        totalPriceMinor:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          nullable: true
+          minLength: 3
+          maxLength: 3
+        styleTags:
+          type: array
+          items:
+            type: string
+        validationStatus:
+          type: string
+          enum: &a3
+            - complete
+            - incomplete
+        createdAt:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - items
+        - totalPriceMinor
+        - currency
+        - styleTags
+        - validationStatus
+        - createdAt
+        - updatedAt
+    OutfitPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+                minLength: 1
+                maxLength: 120
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    productId:
+                      type: string
+                      format: uuid
+                    category:
+                      type: string
+                      enum: *a1
+                    selectedColor:
+                      type: string
+                      minLength: 1
+                    selectedSize:
+                      type: string
+                      minLength: 1
+                  required:
+                    - productId
+                    - category
+                    - selectedColor
+                    - selectedSize
+                  additionalProperties: false
+              totalPriceMinor:
+                type: integer
+                minimum: 0
+              currency:
+                type: string
+                nullable: true
+                minLength: 3
+                maxLength: 3
+              styleTags:
+                type: array
+                items:
+                  type: string
+              validationStatus:
+                type: string
+                enum: *a3
+              createdAt:
+                type: string
+                nullable: true
+              updatedAt:
+                type: string
+                nullable: true
+            required:
+              - id
+              - name
+              - items
+              - totalPriceMinor
+              - currency
+              - styleTags
+              - validationStatus
+              - createdAt
+              - updatedAt
+        total:
+          type: number
+        page:
+          type: number
+        pageSize:
+          type: number
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+    AdminAnalytics:
+      type: object
+      properties:
+        totalProducts:
+          type: number
+        totalSavedOutfits:
+          type: number
+        mostUsedCategory:
+          type: string
+          nullable: true
+        averageOutfitPriceMinor:
+          type: integer
+          nullable: true
+      required:
+        - totalProducts
+        - totalSavedOutfits
+        - mostUsedCategory
+        - averageOutfitPriceMinor
+    TryOnRequest:
+      type: object
+      properties:
+        photo:
+          type: string
+          pattern: ^data:image\/(jpeg|png|webp);base64,
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+                format: uuid
+              category:
+                type: string
+                enum: *a1
+            required:
+              - productId
+              - category
+          minItems: 1
+          maxItems: 6
+      required:
+        - photo
+        - items
+      additionalProperties: false
+    TryOnResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - processing
+            - completed
+            - failed
+        step:
+          type: integer
+          minimum: 0
+        totalSteps:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+        resultImageUrl:
+          type: string
+          nullable: true
+          format: uri
+        error:
+          type: string
+          nullable: true
+      required:
+        - id
+        - status
+        - step
+        - totalSteps
+        - resultImageUrl
+        - error
+  parameters: {}
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: OK
+        "503":
+          description: Dependency (database) unavailable
+  /api/auth/login:
+    post:
+      operationId: login
+      summary: Admin login — rate-limited, returns a JWT
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the caller's own admin session
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Session revoked
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/outfits:
+    post:
+      operationId: createOutfit
+      summary: Save an outfit — price/completeness recomputed server-side
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                        format: uuid
+                      category:
+                        type: string
+                        enum: *a1
+                      selectedColor:
+                        type: string
+                        minLength: 1
+                      selectedSize:
+                        type: string
+                        minLength: 1
+                    required:
+                      - productId
+                      - category
+                      - selectedColor
+                      - selectedSize
+                    additionalProperties: false
+                  minItems: 1
+              required:
+                - name
+                - items
+              additionalProperties: false
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Outfit"
+        "422":
+          description: Invalid outfit data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listOutfits
+      summary: List saved outfits
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutfitPage"
+  /api/outfits/{id}:
+    get:
+      operationId: getOutfit
+      summary: Get a saved outfit
+      security: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Outfit"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteOutfit
+      summary: Delete a saved outfit
+      security: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/try-on:
+    post:
+      operationId: startTryOn
+      summary: Start a virtual try-on — kicks off the first chain step and returns
+        immediately
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TryOnRequest"
+      responses:
+        "201":
+          description: Try-on started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TryOnResponse"
+        "422":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Upstream try-on service failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Virtual try-on not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/try-on/{id}:
+    get:
+      operationId: getTryOnStatus
+      summary: Poll a try-on request — may itself advance the chain one step further
+      security: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TryOnResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/products:
+    get:
+      operationId: listAdminProducts
+      summary: List all products, including inactive — admin only
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminProductPage"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createAdminProduct
+      summary: Create a product — admin only
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                slug:
+                  type: string
+                  minLength: 1
+                  maxLength: 140
+                  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                description:
+                  type: string
+                  maxLength: 2000
+                category:
+                  type: string
+                  enum: *a1
+                priceMinor:
+                  type: integer
+                  minimum: 0
+                  maximum: 10000000
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  minItems: 1
+                colors:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  minItems: 1
+                sizes:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  minItems: 1
+                styleTags:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  default: &a4 []
+                material:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                availability:
+                  type: string
+                  enum: *a2
+                isActive:
+                  type: boolean
+                  default: true
+              required:
+                - name
+                - slug
+                - description
+                - category
+                - priceMinor
+                - currency
+                - images
+                - colors
+                - sizes
+                - material
+                - availability
+              additionalProperties: false
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid product data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/products/{id}:
+    get:
+      operationId: getAdminProduct
+      summary: Get one product, including inactive — admin only
+      security:
+        - BearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateAdminProduct
+      summary: Partially update a product — admin only, absent fields are left unchanged
+      security:
+        - BearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                slug:
+                  type: string
+                  minLength: 1
+                  maxLength: 140
+                  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                description:
+                  type: string
+                  maxLength: 2000
+                category:
+                  type: string
+                  enum: *a1
+                priceMinor:
+                  type: integer
+                  minimum: 0
+                  maximum: 10000000
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  minItems: 1
+                colors:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  minItems: 1
+                sizes:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  minItems: 1
+                styleTags:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  default: *a4
+                material:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                availability:
+                  type: string
+                  enum: *a2
+                isActive:
+                  type: boolean
+                  default: true
+              additionalProperties: false
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid product data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/analytics:
+    get:
+      operationId: getAdminAnalytics
+      summary: Live-computed catalog/outfit analytics — admin only
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAnalytics"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
